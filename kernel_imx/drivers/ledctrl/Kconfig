@@ -1,0 +1,5 @@
+config LEDCTRL
+    tristate "FlukeNetworks LED driver on FreeScale IMX6 SABRESD"
+    default n
+    help
+    This is the first FlukeNetworks LED driver on FreeScale IMX6 SABRESD
