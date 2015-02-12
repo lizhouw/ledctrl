@@ -63,12 +63,6 @@ static int ledctrl_dev_open (struct inode* inode, struct file* filp)
     dev = container_of(inode->i_cdev, struct ledctrl_hw_dev, dev);
     filp->private_data = dev;
 
-    if(down_interruptible(&(dev->sem))){
-        return -ERESTARTSYS;
-    }
-
-    up(&(dev->sem));
-
     return 0;
 }
 
@@ -189,7 +183,6 @@ nomem_err:
 
 static int ledctrl_dev_proc_open (struct inode* inode, struct file* filp)
 {
-    filp->private_data = ledctrl_dev;
     return single_open(filp, ledctrl_dev_show_status, NULL);
 }
 
@@ -197,12 +190,11 @@ static ssize_t ledctrl_dev_proc_read (struct file* filp, char __user *buf, size_
 {
     int    err  = 0;
     char*  page = NULL;
-    struct ledctrl_hw_dev* dev = filp->private_data;
     volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
 
-    printk(KERN_ALERT "Function ledctrl_dev_proc_read_reg is called. 0x%x 0x%x\n", (unsigned long)reg_data_addr, dev);
+    printk(KERN_ALERT "ledctrl_dev_proc_read_reg: (0x%x 0x%x)\n", (unsigned long)reg_data_addr, ledctrl_dev);
 
-    if(down_interruptible(&(dev->sem))){
+    if(down_interruptible(&(ledctrl_dev->sem))){
         return -ERESTARTSYS;
     }
 
@@ -229,7 +221,7 @@ copy_err:
     free_page((unsigned long)page);
 
 nomem_err:
-    up(&(dev->sem));
+    up(&(ledctrl_dev->sem));
 
     return err;
 }
@@ -238,8 +230,7 @@ static ssize_t ledctrl_dev_proc_write (struct file* filp, const char __user *buf
 {
     char* page = NULL;
     volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
-
-    printk(KERN_ALERT "Function ledctrl_dev_proc_write is called.\n");
+    unsigned int reg_new_val;
 
     page = (char*)__get_free_page(GFP_KERNEL);
     if(!page){
@@ -253,16 +244,21 @@ static ssize_t ledctrl_dev_proc_write (struct file* filp, const char __user *buf
         goto out;
     }
 
-    if(page[0]){
-        writel(readl(reg_data_addr) | USR_DEF_RED_LED_MASK, reg_data_addr);
-    }
-    else{
-        writel(readl(reg_data_addr) & ~USR_DEF_RED_LED_MASK, reg_data_addr);
+    if(down_interruptible(&(ledctrl_dev->sem))){
+        return -ERESTARTSYS;
     }
 
+    if('0' == page[0]){
+        writel(readl(reg_data_addr) & ~USR_DEF_RED_LED_MASK, reg_data_addr);
+    }
+    else{
+        writel(readl(reg_data_addr) | USR_DEF_RED_LED_MASK, reg_data_addr);
+    }
+
+    up(&(ledctrl_dev->sem));
 out:
     free_page((unsigned long)page);
-    return 1;
+    return num;
 }
 
 static int ledctrl_dev_setup (struct ledctrl_hw_dev* ledctrl_dev)
@@ -271,8 +267,6 @@ static int ledctrl_dev_setup (struct ledctrl_hw_dev* ledctrl_dev)
     unsigned int reg_value;
     dev_t dev_no = MKDEV(ledctrl_major, ledctrl_minor);
     volatile void __iomem * reg_dir_addr = ioremap(GPIO1_DIRECTION_REGISTER, 4);
-
-    printk(KERN_ALERT "Function ledctrl_dev_setup is called");
 
     memset(ledctrl_dev, 0, sizeof(struct ledctrl_hw_dev));
     
