@@ -12,6 +12,7 @@
 #include <linux/proc_fs.h>
 #include <linux/device.h>
 #include <linux/slab.h>
+#include <linux/of.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
 
@@ -32,7 +33,7 @@ static int     ledctrl_dev_release      (struct inode *, struct file *);
 static ssize_t ledctrl_dev_read         (struct file *,  char __user *,       size_t,   loff_t *);
 static ssize_t ledctrl_dev_write        (struct file *,  const char __user *, size_t,   loff_t *);
 static int     ledctrl_dev_proc_open    (struct inode *, struct file *);
-static ssize_t ledctrl_dev_proc_read    (struct file *,  char __user *,       size_t,   loff_t *);
+// static ssize_t ledctrl_dev_proc_read    (struct file *,  char __user *,       size_t,   loff_t *);
 static ssize_t ledctrl_dev_proc_write   (struct file *,  const char __user *, size_t,   loff_t *);
 static int     ledctrl_dev_setup        (struct ledctrl_hw_dev*);
 static void    ledctrl_dev_create_proc  (void);
@@ -50,8 +51,8 @@ static struct file_operations ledctrl_fops = {
 static struct file_operations ledctrl_proc_fops = {
     .owner   = THIS_MODULE,
     .open    = ledctrl_dev_proc_open,
-    .release = ledctrl_dev_release,
-    .read    = ledctrl_dev_proc_read,
+    .release = single_release, // ledctrl_dev_release,
+    .read    = seq_read, // ledctrl_dev_proc_read,
     .write   = ledctrl_dev_proc_write,
 };
 
@@ -59,7 +60,6 @@ static int ledctrl_dev_open (struct inode* inode, struct file* filp)
 {
     struct ledctrl_hw_dev* dev;
 
-    printk(KERN_ALERT "Function ledctrl_dev_open is called.\n");
     dev = container_of(inode->i_cdev, struct ledctrl_hw_dev, dev);
     filp->private_data = dev;
 
@@ -68,7 +68,6 @@ static int ledctrl_dev_open (struct inode* inode, struct file* filp)
 
 static int ledctrl_dev_release (struct inode* inode, struct file* filp)
 {
-    printk(KERN_ALERT "Function ledctrl_dev_release is called.\n");
     return 0;
 }
 
@@ -79,8 +78,6 @@ static ssize_t ledctrl_dev_read (struct file* filp, char __user *buf, size_t  nu
     unsigned int reg_value;
     unsigned char led_status;
     volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
-
-    printk(KERN_ALERT "Function ledctrl_dev_read is called.\n");
 
     if(down_interruptible(&(dev->sem))){
         return -ERESTARTSYS;
@@ -115,8 +112,6 @@ static ssize_t ledctrl_dev_write (struct file* filp, const char __user *buf, siz
     unsigned char led_status;
     volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
 
-    printk(KERN_ALERT "Function ledctrl_dev_write is called.\n");
-
     if(down_interruptible(&(dev->sem))){
         return -ERESTARTSYS;
     }
@@ -143,7 +138,7 @@ out:
     return err;
 }
 
-static int ledctrl_dev_show_status (struct seq_file* m,  void* v)
+static int ledctrl_dev_show_status (struct seq_file* seq,  void* offset)
 {
     int    err  = 0;
     char*  page = NULL;
@@ -171,14 +166,14 @@ static int ledctrl_dev_show_status (struct seq_file* m,  void* v)
          goto copy_err;
     }
 
-    seq_printf(m, page);
+    seq_printf(seq, page);
 
 copy_err:
     free_page((unsigned long)page);
  
 nomem_err:
     up(&(dev->sem));
-    return err;
+    return 0;
 }
 
 static int ledctrl_dev_proc_open (struct inode* inode, struct file* filp)
@@ -186,13 +181,14 @@ static int ledctrl_dev_proc_open (struct inode* inode, struct file* filp)
     return single_open(filp, ledctrl_dev_show_status, NULL);
 }
 
+#if 0
 static ssize_t ledctrl_dev_proc_read (struct file* filp, char __user *buf, size_t  num,  loff_t*  off)
 {
     int    err  = 0;
     char*  page = NULL;
     volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
 
-    printk(KERN_ALERT "ledctrl_dev_proc_read_reg: (0x%x 0x%x)\n", (unsigned long)reg_data_addr, ledctrl_dev);
+    printk(KERN_ALERT "ledctrl_dev_proc_read_reg: (%d)\n", *off);
 
     if(down_interruptible(&(ledctrl_dev->sem))){
         return -ERESTARTSYS;
@@ -214,6 +210,9 @@ static ssize_t ledctrl_dev_proc_read (struct file* filp, char __user *buf, size_
     if(err < 0){
         goto copy_err;
     }
+    else{
+        *off = err;
+    }
 
     copy_to_user(buf, page, err);
 
@@ -225,12 +224,12 @@ nomem_err:
 
     return err;
 }
+#endif
 
 static ssize_t ledctrl_dev_proc_write (struct file* filp, const char __user *buf, size_t  num, loff_t*  off)
 {
     char* page = NULL;
     volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
-    unsigned int reg_new_val;
 
     page = (char*)__get_free_page(GFP_KERNEL);
     if(!page){
@@ -300,6 +299,7 @@ static int __init ledctrl_dev_init (void)
 {
     int   err    = -1;
     dev_t dev_no = 0;
+    struct device_node * node_gpio;
     struct device*  tmp_dev = NULL;
 
     printk(KERN_ALERT "Initializing device ledctrl_dev");
@@ -343,6 +343,16 @@ static int __init ledctrl_dev_init (void)
     dev_set_drvdata(tmp_dev, ledctrl_dev);
 
     ledctrl_dev_create_proc();
+
+    node_gpio = of_find_node_by_path("/soc/aips-bus@02000000/gpio1");
+    if(NULL == node_gpio){
+        printk(KERN_ALERT "ledctrl_dev_init: Fail to find node GPIO1\n");
+    }
+    else{
+        void *regs;
+        regs = of_get_property(node_gpio, "reg", NULL);
+        printk(KERN_ALERT "ledctrl_dev_init: Get base address of GPIO1 0x%x\n", regs);
+    }
 
     return 0;
 

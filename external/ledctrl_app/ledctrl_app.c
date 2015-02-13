@@ -18,10 +18,10 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    for( i = 0 ; i < 100 ; i++ ){
+    for( i = 0 ; i < 1000 ; i++ ){
         read(fd, &led_status, 1);
         printf("The LED is %s\n", led_status ? "ON" : "OFF");
-        sleep(5);
+        sleep(1);
 
         led_status = !led_status;
         write(fd, &led_status, 1);
