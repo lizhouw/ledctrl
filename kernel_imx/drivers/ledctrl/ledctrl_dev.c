@@ -18,12 +18,13 @@
 
 #include "ledctrl_dev.h"
 
-#define GPIO1_DATA_REGISTER         ((phys_addr_t)0x0209C000)
-#define GPIO1_DIRECTION_REGISTER    ((phys_addr_t)0x0209C004)
 #define USR_DEF_RED_LED_MASK        0x04     // GPIO1_2
 
 static int ledctrl_major = 0;
 static int ledctrl_minor = 0;
+static int ledctrl_dir_offset  = 0;
+static int ledctrl_data_offset = 0;
+static phys_addr_t  phys_addr_ledctrl;
 
 static struct class*                 ledctrl_class = NULL;
 static struct ledctrl_hw_dev*        ledctrl_dev   = NULL;
@@ -39,6 +40,7 @@ static int     ledctrl_dev_setup        (struct ledctrl_hw_dev*);
 static void    ledctrl_dev_create_proc  (void);
 static void    ledctrl_dev_remove_proc  (void);
 static int     ledctrl_dev_show_status  (struct seq_file*,  void*);
+static void    bigendian_2_littleendian (void*,          ssize_t);
 
 static struct file_operations ledctrl_fops = {
     .owner   = THIS_MODULE,
@@ -55,6 +57,20 @@ static struct file_operations ledctrl_proc_fops = {
     .read    = seq_read, // ledctrl_dev_proc_read,
     .write   = ledctrl_dev_proc_write,
 };
+
+static  void    bigendian_2_littleendian (void*  val_buf, ssize_t  val_size)
+{
+    ssize_t  i = 0, j = val_size - 1;
+    unsigned char  tmp_val;
+
+    while(i < j){
+        tmp_val = ((unsigned char*)val_buf)[i];
+        ((unsigned char*)val_buf)[i] = ((unsigned char*)val_buf)[j];
+        ((unsigned char*)val_buf)[j] = tmp_val;
+        i++;
+        j--;
+    }
+}
 
 static int ledctrl_dev_open (struct inode* inode, struct file* filp)
 {
@@ -77,7 +93,7 @@ static ssize_t ledctrl_dev_read (struct file* filp, char __user *buf, size_t  nu
     struct ledctrl_hw_dev* dev = filp->private_data;
     unsigned int reg_value;
     unsigned char led_status;
-    volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
+    volatile void __iomem * reg_data_addr = ioremap((phys_addr_ledctrl + ledctrl_data_offset), 4);
 
     if(down_interruptible(&(dev->sem))){
         return -ERESTARTSYS;
@@ -110,7 +126,7 @@ static ssize_t ledctrl_dev_write (struct file* filp, const char __user *buf, siz
     ssize_t  err = 0;
     struct ledctrl_hw_dev* dev = filp->private_data;
     unsigned char led_status;
-    volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
+    volatile void __iomem * reg_data_addr = ioremap((phys_addr_ledctrl + ledctrl_data_offset), 4);
 
     if(down_interruptible(&(dev->sem))){
         return -ERESTARTSYS;
@@ -143,7 +159,7 @@ static int ledctrl_dev_show_status (struct seq_file* seq,  void* offset)
     int    err  = 0;
     char*  page = NULL;
     struct ledctrl_hw_dev* dev = ledctrl_dev;
-    volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
+    volatile void __iomem * reg_data_addr = ioremap((phys_addr_ledctrl + ledctrl_data_offset), 4);
 
     if(down_interruptible(&(dev->sem))){
         return -ERESTARTSYS;
@@ -229,7 +245,7 @@ nomem_err:
 static ssize_t ledctrl_dev_proc_write (struct file* filp, const char __user *buf, size_t  num, loff_t*  off)
 {
     char* page = NULL;
-    volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
+    volatile void __iomem * reg_data_addr = ioremap((phys_addr_ledctrl + ledctrl_data_offset), 4);
 
     page = (char*)__get_free_page(GFP_KERNEL);
     if(!page){
@@ -265,7 +281,7 @@ static int ledctrl_dev_setup (struct ledctrl_hw_dev* ledctrl_dev)
     int   err;
     unsigned int reg_value;
     dev_t dev_no = MKDEV(ledctrl_major, ledctrl_minor);
-    volatile void __iomem * reg_dir_addr = ioremap(GPIO1_DIRECTION_REGISTER, 4);
+    volatile void __iomem * reg_dir_addr = ioremap((phys_addr_ledctrl + ledctrl_dir_offset), 4);
 
     memset(ledctrl_dev, 0, sizeof(struct ledctrl_hw_dev));
     
@@ -299,7 +315,7 @@ static int __init ledctrl_dev_init (void)
 {
     int   err    = -1;
     dev_t dev_no = 0;
-    struct device_node * node_gpio;
+    struct device_node * node_ledctrl;
     struct device*  tmp_dev = NULL;
 
     printk(KERN_ALERT "Initializing device ledctrl_dev");
@@ -344,14 +360,24 @@ static int __init ledctrl_dev_init (void)
 
     ledctrl_dev_create_proc();
 
-    node_gpio = of_find_node_by_path("/soc/aips-bus@02000000/gpio1");
-    if(NULL == node_gpio){
-        printk(KERN_ALERT "ledctrl_dev_init: Fail to find node GPIO1\n");
+    node_ledctrl = of_find_node_by_path("/soc/ledctrl-dev");
+    if(NULL == node_ledctrl){
+        printk(KERN_ALERT "ledctrl_dev_init: Fail to find node ledctrl GPIO1\n");
     }
     else{
-        void *regs;
-        regs = of_get_property(node_gpio, "reg", NULL);
-        printk(KERN_ALERT "ledctrl_dev_init: Get base address of GPIO1 0x%x\n", regs);
+        void *node_property;
+
+        node_property       = of_get_property(node_ledctrl, "reg", NULL);
+        bigendian_2_littleendian(node_property, sizeof(phys_addr_t));
+        phys_addr_ledctrl   = *((phys_addr_t*)node_property);
+
+        node_property       = of_get_property(node_ledctrl, "dir-offset", NULL);
+        bigendian_2_littleendian(node_property, sizeof(int));
+        ledctrl_dir_offset  = *((int*)node_property);
+
+        node_property       = of_get_property(node_ledctrl, "data-offset", NULL);
+        bigendian_2_littleendian(node_property, sizeof(int));
+        ledctrl_data_offset = *((int*)node_property);
     }
 
     return 0;
