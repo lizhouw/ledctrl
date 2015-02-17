@@ -24,7 +24,7 @@ endif # BUILD_TARGET_DEVICE
 
 # build for secure USB
 PRODUCT_COPY_FILES +=	\
-	device/fsl/sabresd_6dq/adb_keys:root/data/misc/adb/adb_keys
+	device/fsl/sabresd_6dq/adb_keys:root/adb_keys
 
 TARGET_BOOTLOADER_BOARD_NAME := SABRESD
 PRODUCT_MODEL := SABRESD-MX6DQ
