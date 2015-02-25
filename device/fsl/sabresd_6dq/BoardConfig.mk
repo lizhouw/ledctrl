@@ -22,10 +22,6 @@ PRODUCT_COPY_FILES +=	\
 	device/fsl/sabresd_6dq/fstab.freescale:root/fstab.freescale
 endif # BUILD_TARGET_DEVICE
 
-# build for secure USB
-PRODUCT_COPY_FILES +=	\
-	device/fsl/sabresd_6dq/adb_keys:root/adb_keys
-
 TARGET_BOOTLOADER_BOARD_NAME := SABRESD
 PRODUCT_MODEL := SABRESD-MX6DQ
 

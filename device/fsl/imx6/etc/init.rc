@@ -309,7 +309,6 @@ on post-fs-data
     chmod 0660 /data/misc/wifi/wpa_supplicant.conf
     mkdir /data/local 0751 root root
     mkdir /data/misc/media 0700 media media
-    copy /adb_keys /data/misc/adb/adb_keys
 
     # For security reasons, /data/local/tmp should always be empty.
     # Do not place files or directories in /data/local/tmp
@@ -489,7 +488,13 @@ on boot
 
 
 #  Enable adb security for JB4.2.2
-    setprop ro.adb.secure 1
+    build_type = `getprop ro.build.type`
+    if [ $build_type = 'eng' ];
+    then
+       setprop ro.adb.secure 0
+    else
+       setprop ro.adb.secure 1
+    fi
 
 #  Set GPU 3D minimum clock to 3/64
    write /sys/bus/platform/drivers/galcore/gpu3DMinClock 3
