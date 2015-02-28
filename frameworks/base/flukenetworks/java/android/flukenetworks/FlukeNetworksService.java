@@ -3,6 +3,7 @@ package android.flukenetworks;
 import android.content.Context;
 import android.os.ServiceManager;
 import android.util.Log;
+import android.os.RemoteException;
 import com.android.internal.flukenetworks.ILedctrlService;
 
 public class FlukeNetworksService {
@@ -18,15 +19,28 @@ public class FlukeNetworksService {
     }
 
     public void ledOn(){
-        ledctrl_service.setStatus(1);
+        try{
+            ledctrl_service.setStatus(1);
+        } 
+        catch (RemoteException ex) {
+        }
     }
 
     public void ledOff(){
-        ledctrl_service.setStatus(0);
+        try{
+            ledctrl_service.setStatus(0);
+        }
+        catch (RemoteException ex) {
+        }
     }
 
     public int ledStatus(){
-        return ledctrl_service.getStatus();
+        try{
+            return ledctrl_service.getStatus();
+        }
+        catch (RemoteException ex){
+            return -1;
+        }
     }
 }
 
