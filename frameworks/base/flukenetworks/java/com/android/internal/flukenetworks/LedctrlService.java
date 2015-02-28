@@ -1,12 +1,11 @@
-package com.android.server;
+package com.android.internal.flukenetworks;
 
 import android.content.Context;
-import android.hardware.ILedctrlService;
 import android.util.Slog;
 import com.android.internal.flukenetworks.ILedctrlService;
 
 public class LedctrlService extends ILedctrlService.Stub {
-    private static final String TAG = "LedCtrl Service";
+    private static final String LOG_TAG = "LedCtrl Service";
 
     LedctrlService(){
         init_native();
@@ -18,6 +17,7 @@ public class LedctrlService extends ILedctrlService.Stub {
 
     public int getStatus(){
         return getstatus_native();
+        return 0;
     }
 
     private static native void init_native();

@@ -148,7 +148,6 @@ LOCAL_SRC_FILES += \
 	core/java/android/hardware/camera2/ICameraDeviceUser.aidl \
 	core/java/android/hardware/camera2/ICameraDeviceCallbacks.aidl \
 	core/java/android/hardware/ISerialManager.aidl \
-	core/java/android/hardware/ILedctrlService.aidl \
 	core/java/android/hardware/display/IDisplayManager.aidl \
 	core/java/android/hardware/display/IDisplayManagerCallback.aidl \
 	core/java/android/hardware/display/IVirtualDisplayCallback.aidl \
@@ -376,6 +375,7 @@ LOCAL_SRC_FILES += \
 	telephony/java/com/android/internal/telephony/IWapPushManager.aidl \
 	telephony/java/com/android/internal/telephony/ISub.aidl \
 	telephony/java/com/android/internal/telephony/IMms.aidl \
+	flukenetworks/java/com/android/internal/flukenetworks/ILedctrlService.aidl \
 	wifi/java/android/net/wifi/IWifiManager.aidl \
 	wifi/java/android/net/wifi/p2p/IWifiP2pManager.aidl \
 	wifi/java/android/net/wifi/IWifiScanner.aidl \

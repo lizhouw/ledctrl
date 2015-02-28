@@ -65,6 +65,6 @@ namespace android
     };
 
     int register_android_server_LedCtrlMgr(JNIEnv* env){
-        return jniRegisterNativeMethods(env, "com/android/server/LedCtrlMgr", method_table, NELEM(method_table));
+        return jniRegisterNativeMethods(env, "com/android/server/LedctrlService", method_table, NELEM(method_table));
     }
 };
