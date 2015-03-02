@@ -1,7 +1,6 @@
 package com.android.server;
 
 import android.content.Context;
-import android.hardware.ILedctrlService;
 import android.util.Slog;
 import com.android.internal.flukenetworks.ILedctrlService;
 

@@ -13,6 +13,7 @@ public class FlukeNetworksService {
 
     public FlukeNetworksService(Context context){
         if (ledctrl_service == null) {
+            Log.i(LOG_TAG, "A new FlukeNetworksService instance is created");
             ledctrl_service = ILedctrlService.Stub.asInterface(ServiceManager.getService(                                                          
                                                                "LedctrlService"));
         }
@@ -20,6 +21,7 @@ public class FlukeNetworksService {
 
     public void ledOn(){
         try{
+            Log.i(LOG_TAG, "FlukeNetworksService::ledOn is called");
             ledctrl_service.setStatus(1);
         } 
         catch (RemoteException ex) {
@@ -28,6 +30,7 @@ public class FlukeNetworksService {
 
     public void ledOff(){
         try{
+            Log.i(LOG_TAG, "FlukeNetworksService::ledOff is called");
             ledctrl_service.setStatus(0);
         }
         catch (RemoteException ex) {
@@ -36,6 +39,7 @@ public class FlukeNetworksService {
 
     public int ledStatus(){
         try{
+            Log.i(LOG_TAG, "FlukeNetworksService::ledStatus is called");
             return ledctrl_service.getStatus();
         }
         catch (RemoteException ex){

@@ -49,12 +49,16 @@ namespace android
         ledctrl_hal_module_t* module;
 
         ALOGI("[%s] Initializing......", LEDCTRL_LOG_TAG);
-        if((0 == hw_get_module(LEDCTRL_MODULE_ID, (const struct hw_module_t**)&module)) &&
-           (0 == ledctrl_jni_open(&(module->mod_common), &ledctrl_dev))){
-            ALOGI("[%s] Open device successfully", LEDCTRL_LOG_TAG);
+        if(0 == hw_get_module(LEDCTRL_MODULE_ID, (const struct hw_module_t**)&module)){ 
+            if(0 == ledctrl_jni_open(&(module->mod_common), &ledctrl_dev)){
+                ALOGI("[%s] Open device successfully", LEDCTRL_LOG_TAG);
+            }
+            else{
+                ALOGE("[%s] Open device unsuccessfully", LEDCTRL_LOG_TAG);
+            }
         }
         else{
-            ALOGE("[%s] Open device unsuccessfully", LEDCTRL_LOG_TAG);
+            ALOGE("[%s] Fail to get module", LEDCTRL_LOG_TAG);
         }
     }
 

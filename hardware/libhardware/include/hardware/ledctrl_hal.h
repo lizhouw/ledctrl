@@ -3,7 +3,7 @@
 
 #include <hardware/hardware.h>
 
-#define LEDCTRL_MODULE_ID             "ledctrl_hal_id"
+#define LEDCTRL_MODULE_ID             "ledctrl_hal"
 #define LEDCTRL_MODULE_NAME           "ledctrl_hal"
 
 __BEGIN_DECLS

@@ -7,7 +7,7 @@
 
 #define LEDCTRL_LOG_TAG       "LEDCTRL_HAL"
 #define DEVICE_TAG            "LEDCTRL_HAL"
-#define DEVICE_NAME           "/dev/ledctrl"
+#define DEVICE_NAME           "/dev/ledctrl_dev"
 #define MODULE_AUTHOR         "lizhou.wan@flukenetworks.com"
 
 static int ledctrl_device_open   (const hw_module_t*, const char*, struct hw_device_t**);
@@ -19,13 +19,13 @@ static struct hw_module_methods_t ledctrl_module_methods = {
     open: ledctrl_device_open,
 };
 
-struct ledctrl_hal_module_t ledctrl_hal_module_info = {
+struct ledctrl_hal_module_t HAL_MODULE_INFO_SYM = {
     mod_common: {
         tag: HARDWARE_MODULE_TAG,
         version_major: 1,
         version_minor: 0,
         id: LEDCTRL_MODULE_ID,
-        name: MODULE_NAME,
+        name: LEDCTRL_MODULE_NAME,
         author: MODULE_AUTHOR,
         methods: &ledctrl_module_methods,
     }

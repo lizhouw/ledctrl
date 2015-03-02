@@ -17,7 +17,6 @@ public class LedctrlService extends ILedctrlService.Stub {
 
     public int getStatus(){
         return getstatus_native();
-        return 0;
     }
 
     private static native void init_native();
