@@ -33,8 +33,8 @@ static int     ledctrl_dev_open         (struct inode *, struct file *);
 static int     ledctrl_dev_release      (struct inode *, struct file *);
 static ssize_t ledctrl_dev_read         (struct file *,  char __user *,       size_t,   loff_t *);
 static ssize_t ledctrl_dev_write        (struct file *,  const char __user *, size_t,   loff_t *);
-static int     ledctrl_dev_proc_open    (struct inode *, struct file *);
-// static ssize_t ledctrl_dev_proc_read    (struct file *,  char __user *,       size_t,   loff_t *);
+// static int     ledctrl_dev_proc_open    (struct inode *, struct file *);
+static ssize_t ledctrl_dev_proc_read    (struct file *,  char __user *,       size_t,   loff_t *);
 static ssize_t ledctrl_dev_proc_write   (struct file *,  const char __user *, size_t,   loff_t *);
 static int     ledctrl_dev_setup        (struct ledctrl_hw_dev*);
 static void    ledctrl_dev_create_proc  (void);
@@ -52,9 +52,9 @@ static struct file_operations ledctrl_fops = {
 
 static struct file_operations ledctrl_proc_fops = {
     .owner   = THIS_MODULE,
-    .open    = ledctrl_dev_proc_open,
-    .release = single_release, // ledctrl_dev_release,
-    .read    = seq_read, // ledctrl_dev_proc_read,
+    .open    = ledctrl_dev_open,
+    .release = ledctrl_dev_release,
+    .read    = ledctrl_dev_proc_read,
     .write   = ledctrl_dev_proc_write,
 };
 
@@ -78,6 +78,7 @@ static int ledctrl_dev_open (struct inode* inode, struct file* filp)
 
     dev = container_of(inode->i_cdev, struct ledctrl_hw_dev, dev);
     filp->private_data = dev;
+	filp->fpos         = 0;
 
     return 0;
 }
@@ -192,12 +193,13 @@ nomem_err:
     return 0;
 }
 
+#if 0
 static int ledctrl_dev_proc_open (struct inode* inode, struct file* filp)
 {
     return single_open(filp, ledctrl_dev_show_status, NULL);
 }
+#endif
 
-#if 0
 static ssize_t ledctrl_dev_proc_read (struct file* filp, char __user *buf, size_t  num,  loff_t*  off)
 {
     int    err  = 0;
@@ -205,6 +207,10 @@ static ssize_t ledctrl_dev_proc_read (struct file* filp, char __user *buf, size_
     volatile void __iomem * reg_data_addr = ioremap(GPIO1_DATA_REGISTER, 4);
 
     printk(KERN_ALERT "ledctrl_dev_proc_read_reg: (%d)\n", *off);
+
+	if(1 == *off){
+		return 0;
+	}
 
     if(down_interruptible(&(ledctrl_dev->sem))){
         return -ERESTARTSYS;
@@ -240,7 +246,6 @@ nomem_err:
 
     return err;
 }
-#endif
 
 static ssize_t ledctrl_dev_proc_write (struct file* filp, const char __user *buf, size_t  num, loff_t*  off)
 {
